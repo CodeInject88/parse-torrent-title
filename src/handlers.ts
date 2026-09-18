@@ -1447,7 +1447,7 @@ export const handlers: Handler[] = [
   },
   {
     field: 'seasons',
-    pattern: /t(\d{1,3})(?:[ex]+|$)/i,
+    pattern: /\bt(\d{1,3})(?:[ex]+|$)/i,
     transform: toIntArray(),
     remove: true
   },

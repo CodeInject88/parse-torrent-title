@@ -399,6 +399,11 @@ describe('parseTorrentTitle - seasons', () => {
     expect(result.seasons).toEqual([1]);
   });
 
+  test('no spanish short season identifier inside a word', () => {
+    const result = parseTorrentTitle('Movie.2020.1080p.WEB-DL.H264-OUTPOST31');
+    expect(result.seasons).toBeUndefined();
+  });
+
   test('sn naming scheme', () => {
     const result = parseTorrentTitle(
       'Sons of Anarchy Sn4 Ep14 HD-TV - To Be, Act 2, By Cool Release'

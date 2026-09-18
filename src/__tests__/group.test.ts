@@ -162,6 +162,13 @@ describe('Group Detection Tests', () => {
     }
   });
 
+  test('group ending in t and digits', () => {
+    for (const group of ['OUTPOST31', 'ABCT31']) {
+      const result = parseTorrentTitle(`Movie.2020.1080p.WEB-DL.H264-${group}`);
+      expect(result.group).toBe(group);
+    }
+  });
+
   test('digit as the second character', () => {
     const result = parseTorrentTitle(
       'The.Legend.of.Vox.Machina.S04E12.MULTi.1080p.AMZN.WEB-DL.H264.DDP5.1-K83.mkv'
