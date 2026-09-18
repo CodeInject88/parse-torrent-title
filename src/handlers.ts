@@ -6,7 +6,7 @@
  */
 
 import { Handler, ValueSet } from './types.js';
-import { nonAlphasRegex } from './utils.js';
+import { extractGroup, nonAlphasRegex } from './utils.js';
 import {
   toValue,
   toLowercase,
@@ -37,7 +37,7 @@ import {
   validateOr,
   validateLookahead
 } from './validators.js';
-import { regexMatchUntilValid, removeFromValue } from './processors.js';
+import { removeFromValue } from './processors.js';
 
 /**
  * All handlers in the exact order as handlers.go
@@ -279,6 +279,7 @@ export const handlers: Handler[] = [
         result.set('complete', {
           mIndex: m.mIndex,
           mValue: m.mValue,
+          matched: [m.mValue],
           value: true,
           remove: false,
           processed: false
@@ -302,6 +303,7 @@ export const handlers: Handler[] = [
         result.set('complete', {
           mIndex: m.mIndex,
           mValue: m.mValue,
+          matched: [m.mValue],
           value: true,
           remove: false,
           processed: false
@@ -1171,22 +1173,10 @@ export const handlers: Handler[] = [
     keepMatching: true
   },
 
-  // Group handler (lines 1523-1528 in handlers.go)
-  {
-    field: 'group',
-    process: regexMatchUntilValid(
-      /- ?([^\-. \[]+[^\-. \[)\]E\d][^\-. \[)\]]*)(?:\[[\w.-]+])?/i,
-      validateAnd(
-        validateNotMatch(/- ?(?:\d+$|S\d+|\d+x|ep?\d+|[^[]+]$)/i),
-        validateLookahead('(?:[ .]\\w{2,4}$|$)', 'i', true)
-      )
-    )
-  },
-
   // Size handler
   {
     field: 'size',
-    pattern: /\b(\d+((\.|,)\d+)?\s?(MB|GB|TB))\b/i,
+    pattern: /\b(\d+((\.|,)\d+)?[\s-]?(MB|GB|TB))\b/i,
     remove: true
   },
 
@@ -3424,39 +3414,21 @@ export const handlers: Handler[] = [
   // Group handlers (final)
   {
     field: 'group',
-    pattern: /\b(INFLATE|DEFLATE)\b/,
+    pattern: /\b(\w+-raws)(?:\.com)?\b/i,
     remove: true
-  },
-  {
-    field: 'group',
-    pattern: /\b(?:Erai-raws|Erai-raws\.com)\b/i,
-    transform: toValue('Erai-raws'),
-    remove: true
-  },
-  {
-    field: 'group',
-    pattern: /^\[([^\[\]]+)]/
-  },
-  {
-    field: 'group',
-    pattern: /\(([\w-]+)\)(?:$|\.\w{2,4}$)/
   },
   {
     field: 'group',
     process: (title: string, m, result) => {
-      const re = /^\[.+]$/;
-      if (m.mValue && re.test(m.mValue)) {
-        const endIndex = m.mIndex + m.mValue.length;
-        // remove anime group match if some other parameter is contained in it, since it's a false positive.
-        for (const [key, km] of result.entries()) {
-          if (km.mIndex > 0 && km.mIndex < endIndex) {
-            m.value = null;
-            return m;
-          }
-        }
+      if (m.value) return m;
+      const g = extractGroup(title, result);
+      if (g === null) {
+        m.value = null;
+        return m;
       }
-      m.mIndex = 0;
-      m.mValue = '';
+      m.value = g.value;
+      m.mValue = g.value;
+      m.mIndex = g.index;
       return m;
     }
   },

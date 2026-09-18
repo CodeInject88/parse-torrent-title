@@ -54,6 +54,7 @@ export interface ParsedResult {
 export interface ParseMeta {
   mIndex: number;
   mValue: string;
+  matched: string[];
   value: any;
   remove: boolean;
   processed: boolean;

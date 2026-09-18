@@ -113,11 +113,11 @@ describe('Group Detection Tests', () => {
     expect(result.group).toBe('BladeBDP');
   });
 
-  test('group in parenthesis', () => {
+  test('hyphenated raws group before a source in parenthesis', () => {
     const result = parseTorrentTitle(
       'Jujutsu Kaisen S02E01 2160p WEB H.265 AAC -Tsundere-Raws (B-Global).mkv'
     );
-    expect(result.group).toBe('B-Global');
+    expect(result.group).toBe('Tsundere-Raws');
   });
 
   test('not detect brackets group when it contains other parsed parameters', () => {
@@ -144,5 +144,87 @@ describe('Group Detection Tests', () => {
       '[ Torrent9.cz ] The.InBetween.S01E10.FiNAL.HDTV.XviD-EXTREME.avi'
     );
     expect(result.group).toBe('EXTREME');
+  });
+
+  test('group at the end of a trailing bracket group', () => {
+    for (const [filename, group] of [
+      [
+        'Fallout (2024) S01E01 (2160p AMZN WEB-DL Hybrid H265 DV HDR10+ DDP Atmos 5.1 English - HONE) [MPD]',
+        'HONE'
+      ],
+      [
+        'Avatar 2009 [1080p.BDRip.x264.AC3-azjatycki] [5.1] [Lektor PL]',
+        'azjatycki'
+      ]
+    ]) {
+      const result = parseTorrentTitle(filename);
+      expect(result.group).toBe(group);
+    }
+  });
+
+  test('digit as the second character', () => {
+    const result = parseTorrentTitle(
+      'The.Legend.of.Vox.Machina.S04E12.MULTi.1080p.AMZN.WEB-DL.H264.DDP5.1-K83.mkv'
+    );
+    expect(result.group).toBe('K83');
+  });
+
+  test('space before a trailing hash', () => {
+    const result = parseTorrentTitle(
+      'The.Boys.S04E01.480p.x264-RUBiK [3d03bb51e]'
+    );
+    expect(result.group).toBe('RUBiK');
+  });
+
+  test('source in parenthesis after the group', () => {
+    const result = parseTorrentTitle(
+      'Spy x Family - S01E01 - ENGLISH 1080p WEB x264 -NanDesuKa (CR)'
+    );
+    expect(result.group).toBe('NanDesuKa');
+  });
+
+  test('spaced group with dot separators', () => {
+    const result = parseTorrentTitle(
+      'Ma.2019.1080p.Blu-ray.Remux.AVC.DTS-HD.MA.5.1.-.KRaLiMaRKo'
+    );
+    expect(result.group).toBe('KRaLiMaRKo');
+  });
+
+  test('leading bracket group wins over a spaced episode title', () => {
+    const result = parseTorrentTitle(
+      '[KH] Sword Art Online II - 14.5 - Debriefing.mkv'
+    );
+    expect(result.group).toBe('KH');
+  });
+
+  test('bare title ending in a hyphenated word', () => {
+    const result = parseTorrentTitle('Spider-Man');
+    expect(result.group).toBeUndefined();
+    expect(result.title).toBe('Spider-Man');
+  });
+
+  test('spaced episode title with no tags before it', () => {
+    const result = parseTorrentTitle('Dexter New Blood - S01E01 - Cold Snap');
+    expect(result.group).toBeUndefined();
+    expect(result.episodeTitle).toBe('Cold Snap');
+  });
+
+  test('spaced episode number after tags', () => {
+    const result = parseTorrentTitle('Solo Leveling - 01 (2160p H265)');
+    expect(result.group).toBeUndefined();
+  });
+
+  test('language tag that stays in the name', () => {
+    const result = parseTorrentTitle(
+      'Blade.Runner.2049.2017.REMUX.1080p-Dual-Lat.mkv'
+    );
+    expect(result.group).toBeUndefined();
+  });
+
+  test('language code before a subtitle extension', () => {
+    const result = parseTorrentTitle(
+      "Frieren - Beyond Journey's End - S01E01 - TBA WEBDL-1080p.es.ass"
+    );
+    expect(result.group).toBeUndefined();
   });
 });

@@ -652,7 +652,7 @@ describe('Parse Torrent Title', () => {
         container: 'mkv',
         dubbed: true,
         extension: 'mkv',
-        group: 'MovCr',
+        group: undefined,
         languages: ['dual audio', 'en', 'hi'],
         quality: 'WEB-DL',
         resolution: '720p',
@@ -1335,7 +1335,7 @@ describe('Parse Torrent Title', () => {
         hdr: ['DV', 'HDR'],
         subbed: true,
         year: '2024',
-        group: 'Eng'
+        group: undefined
       }
     },
     {
@@ -1687,7 +1687,8 @@ describe('Parse Torrent Title - Edge Cases', () => {
         codec: 'x264',
         audio: ['DDP'],
         channels: ['5.1'],
-        group: 'gb',
+        group: undefined,
+        size: '3-gb',
         languages: ['ta'],
         resolution: '1080p',
         title: 'deiva-thirumagal',
@@ -1935,7 +1936,7 @@ describe('Parse Torrent Title - Anime Tests', () => {
     {
       title: 'Detective Conan season 1 to season 22 + season 23(incomplete)',
       expected: {
-        group: 'incomplete',
+        group: undefined,
         seasons: intRange(1, 22),
         title: 'Detective Conan'
       }

@@ -5,6 +5,11 @@
 
 // Unicode property escapes aren't fully supported in JS regex
 // We'll use XRegExp or create character ranges for non-English chars
+import type { ParseMeta } from './types.js';
+
+export const extensions =
+  '3g2|3gp|avi|flv|mkv|mk3d|mov|mp2|mp4|m4v|mpe|mpeg|mpg|mpv|webm|wmv|ogm|divx|ts|m2ts|iso|vob|sub|idx|ttxt|txt|smi|srt|ssa|ass|vtt|nfo|html';
+
 export const NON_ENGLISH_CHARS =
   '\\u3040-\\u309F\\u30A0-\\u30FF\\u4E00-\\u9FFF\\u0400-\\u04FF';
 
@@ -147,8 +152,7 @@ export function cleanTitle(rawTitle: string): string {
 
 const episodeTitleLetterRegex = new RegExp(`[a-zA-Z${NON_ENGLISH_CHARS}]`);
 const episodeTitleTokenRegex = /[^ .[\]() {}/\\|]+/y;
-const extensionTokenRegex =
-  /^(3g2|3gp|avi|flv|mkv|mk3d|mov|mp2|mp4|m4v|mpe|mpeg|mpg|mpv|webm|wmv|ogm|divx|ts|m2ts|iso|vob|sub|idx|ttxt|txt|smi|srt|ssa|ass|vtt|nfo|html)$/i;
+const extensionTokenRegex = new RegExp(`^(${extensions})$`, 'i');
 // Scene, subtitle and dub markers that are never part of an episode title.
 // Native-language spellings matter: release names carry them untranslated
 // ("legendado", "dublado").
@@ -447,6 +451,103 @@ export function extractEpisodeTitle(
   if (/^ep(?:isode)?s?[ .]*\d{1,4}$/i.test(episodeTitle)) return null;
 
   return episodeTitle;
+}
+
+// The group is the last token of the name or its leading [Group], read from
+// the working string once every recognised tag is gone. A trailing bracket
+// either ends in "- GROUP" or is an indexer's addition.
+const groupToken = String.raw`[^\s.\-\[\]()/\\]+`;
+// Subtitle sidecars carry a language code before the extension.
+const extensionRegex = new RegExp(
+  String.raw`(?:[. ][a-z]{2,3}(?:-[a-z]{2})?)?[. ](?:${extensions})$`,
+  'i'
+);
+const trailingBracketRegex = /\s?[\[(]([^\[\]()]*)[\])]$/;
+const bracketGroupRegex = new RegExp(
+  String.raw`[\s.]-[\s.]?(${groupToken})[\])]$`
+);
+// Attached ("x264-GRP") or spaced with a separator on both sides (" - GRP").
+const trailingGroupRegex = new RegExp(
+  String.raw`(?:([\s.])-[\s.]|-)(${groupToken})$`
+);
+const episodeLikeRegex =
+  /^(?:\d+|\d+[a-z]|\d+v\d+|\d+x\d+|s\d+\w*|ep?\d+\w*)$/i;
+const technicalFields = ['resolution', 'quality', 'codec', 'audio'];
+
+function hasToken(text: string, token: string): boolean {
+  for (let i = text.indexOf(token); i !== -1; i = text.indexOf(token, i + 1)) {
+    const end = i + token.length;
+    if (
+      (i === 0 || !wordCharRegex.test(text[i - 1])) &&
+      (end === text.length || !wordCharRegex.test(text[end]))
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function extractGroup(
+  w: string,
+  result: Map<string, ParseMeta>
+): { value: string; index: number } | null {
+  // Rejects episode markers and tokens another handler already claimed.
+  const accept = (token: string): boolean => {
+    if (episodeLikeRegex.test(token)) return false;
+    const lower = token.toLowerCase();
+    for (const [field, meta] of result) {
+      if (field === 'group') continue;
+      const texts = meta.matched;
+      const last = texts.length - 1;
+      for (let i = 0; i <= texts.length; i++) {
+        const text = i <= last ? texts[i] : meta.mValue;
+        if (i > last && last >= 0 && text === texts[last]) break;
+        if (text.length >= lower.length && hasToken(text.toLowerCase(), lower)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  // A leading bracket that lost a tag to removal is a tag list, not a group.
+  const leading = beforeTitleRegex.exec(w);
+  const leadingGroup =
+    leading !== null && !/^[\s.\-_]|[\s.\-_]$|[\s.\-_]{2}/.test(leading[1])
+      ? leading[1]
+      : null;
+
+  // A bare title has no tags, so its last hyphenated word is not a group.
+  // A spaced " - GRP" is an episode title unless a tag block precedes it.
+  let anyField = false;
+  for (const field of result.keys()) {
+    if (field !== 'group' && field !== 'container' && field !== 'extension') {
+      anyField = true;
+      break;
+    }
+  }
+  const afterTags =
+    leadingGroup === null && technicalFields.some((f) => result.has(f));
+
+  let s = w.replace(extensionRegex, '');
+  let bm: RegExpExecArray | null;
+  while ((bm = trailingBracketRegex.exec(s)) !== null) {
+    const gm =
+      afterTags && /[\s.]/.test(bm[1]) ? bracketGroupRegex.exec(s) : null;
+    if (gm && accept(gm[1])) {
+      return {
+        value: gm[1],
+        index: gm.index + gm[0].length - 1 - gm[1].length
+      };
+    }
+    s = s.slice(0, bm.index);
+  }
+
+  const tm = anyField ? trailingGroupRegex.exec(s) : null;
+  if (tm && (tm[1] === undefined || afterTags) && accept(tm[2])) {
+    return { value: tm[2], index: tm.index + tm[0].length - tm[2].length };
+  }
+  return leadingGroup === null ? null : { value: leadingGroup, index: 0 };
 }
 
 /**

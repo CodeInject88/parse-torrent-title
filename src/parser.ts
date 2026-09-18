@@ -220,6 +220,7 @@ export function parse(
         m = {
           mIndex: 0,
           mValue: '',
+          matched: [],
           value: hasValueSet(field) ? new ValueSet<any>() : null,
           remove: false,
           processed: false
@@ -230,6 +231,7 @@ export function parse(
       if (m) {
         m.mIndex = matchStart;
         m.mValue = rawMatchedPart;
+        m.matched.push(rawMatchedPart);
         if (!hasValueSet(field)) {
           m.value = matchedPart;
         }
@@ -249,6 +251,7 @@ export function parse(
         const emptyMeta: ParseMeta = {
           mIndex: 0,
           mValue: '',
+          matched: [],
           value: null,
           remove: false,
           processed: false
