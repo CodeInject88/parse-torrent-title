@@ -169,6 +169,38 @@ describe('Group Detection Tests', () => {
     }
   });
 
+  test('group before a removed tag', () => {
+    for (const [filename, group] of [
+      ['X-Men.2000.1080p.BluRay.x264-SPARKS.REPACK', 'SPARKS'],
+      ['Show.S01E01.720p.HDTV.x264-KILLERS.[eztv]', 'KILLERS'],
+      [
+        'Avengers-Age.of.Ultron.2015.(2160p.DSNP.WEB-DL.Hybrid.H265.DV.HDR.DDP.Atmos.5.1.English-HONE).REPACK',
+        'HONE'
+      ]
+    ]) {
+      const result = parseTorrentTitle(filename);
+      expect(result.group).toBe(group);
+    }
+  });
+
+  test('group before a stray hyphen', () => {
+    const result = parseTorrentTitle(
+      'Jay_Kelly-2025-2160p_NF_WEB-DL_Hybrid_H265_DV_HDR_DDP_Atmos_5.1_English-HONE-.mkv'
+    );
+    expect(result.group).toBe('HONE');
+  });
+
+  test('hyphenated title before a removed tag', () => {
+    for (const filename of [
+      'Spider-Man.1080p',
+      'Spider-Man-2002.mkv',
+      'The-Matrix-1080p.mkv'
+    ]) {
+      const result = parseTorrentTitle(filename);
+      expect(result.group).toBeUndefined();
+    }
+  });
+
   test('digit as the second character', () => {
     const result = parseTorrentTitle(
       'The.Legend.of.Vox.Machina.S04E12.MULTi.1080p.AMZN.WEB-DL.H264.DDP5.1-K83.mkv'

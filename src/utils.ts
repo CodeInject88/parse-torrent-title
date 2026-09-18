@@ -455,17 +455,17 @@ export function extractEpisodeTitle(
 
 // The group is the last token of the name or its leading [Group], read from
 // the working string once every recognised tag is gone. A trailing bracket
-// either ends in "- GROUP" or is an indexer's addition.
+// either ends in "-GROUP" after a tag or is an indexer's addition.
 const groupToken = String.raw`[^\s.\-\[\]()/\\]+`;
 // Subtitle sidecars carry a language code before the extension.
 const extensionRegex = new RegExp(
   String.raw`(?:[. ][a-z]{2,3}(?:-[a-z]{2})?)?[. ](?:${extensions})$`,
   'i'
 );
+const separatorRegex = /[\s.\-]/;
 const trailingBracketRegex = /\s?[\[(]([^\[\]()]*)[\])]$/;
-const bracketGroupRegex = new RegExp(
-  String.raw`[\s.]-[\s.]?(${groupToken})[\])]$`
-);
+const bracketGroupRegex = new RegExp(String.raw`-[\s.]?(${groupToken})[\])]$`);
+const lastTokenRegex = new RegExp(String.raw`${groupToken}$`);
 // Attached ("x264-GRP") or spaced with a separator on both sides (" - GRP").
 const trailingGroupRegex = new RegExp(
   String.raw`(?:([\s.])-[\s.]|-)(${groupToken})$`
@@ -491,9 +491,7 @@ export function extractGroup(
   w: string,
   result: Map<string, ParseMeta>
 ): { value: string; index: number } | null {
-  // Rejects episode markers and tokens another handler already claimed.
-  const accept = (token: string): boolean => {
-    if (episodeLikeRegex.test(token)) return false;
+  const claimed = (token: string): boolean => {
     const lower = token.toLowerCase();
     for (const [field, meta] of result) {
       if (field === 'group') continue;
@@ -502,12 +500,25 @@ export function extractGroup(
       for (let i = 0; i <= texts.length; i++) {
         const text = i <= last ? texts[i] : meta.mValue;
         if (i > last && last >= 0 && text === texts[last]) break;
-        if (text.length >= lower.length && hasToken(text.toLowerCase(), lower)) {
-          return false;
+        if (
+          text.length >= lower.length &&
+          hasToken(text.toLowerCase(), lower)
+        ) {
+          return true;
         }
       }
     }
-    return true;
+    return false;
+  };
+  const accept = (token: string): boolean =>
+    !episodeLikeRegex.test(token) && !claimed(token);
+  // A removed tag's gap or a kept tag before the hyphen ends a tag block,
+  // where a title word ("Spider-Man") does not.
+  const followsTag = (s: string, hyphen: number): boolean => {
+    const before = s.slice(0, hyphen);
+    if (/[\s.]$/.test(before)) return true;
+    const pm = lastTokenRegex.exec(before);
+    return pm !== null && claimed(pm[0]);
   };
 
   // A leading bracket that lost a tag to removal is a tag list, not a group.
@@ -518,7 +529,8 @@ export function extractGroup(
       : null;
 
   // A bare title has no tags, so its last hyphenated word is not a group.
-  // A spaced " - GRP" is an episode title unless a tag block precedes it.
+  // A spaced " - GRP" is an episode title unless a tag block precedes it
+  // and nothing follows it.
   let anyField = false;
   for (const field of result.keys()) {
     if (field !== 'group' && field !== 'container' && field !== 'extension') {
@@ -529,12 +541,21 @@ export function extractGroup(
   const afterTags =
     leadingGroup === null && technicalFields.some((f) => result.has(f));
 
+  // Separators at the end are left by tags removed after the group.
   let s = w.replace(extensionRegex, '');
-  let bm: RegExpExecArray | null;
-  while ((bm = trailingBracketRegex.exec(s)) !== null) {
+  let afterRemoval = false;
+  for (;;) {
+    let end = s.length;
+    while (end > 0 && separatorRegex.test(s[end - 1])) end--;
+    if (end < s.length) {
+      s = s.slice(0, end);
+      afterRemoval = true;
+    }
+    const bm = trailingBracketRegex.exec(s);
+    if (bm === null) break;
     const gm =
       afterTags && /[\s.]/.test(bm[1]) ? bracketGroupRegex.exec(s) : null;
-    if (gm && accept(gm[1])) {
+    if (gm && followsTag(s, gm.index) && accept(gm[1])) {
       return {
         value: gm[1],
         index: gm.index + gm[0].length - 1 - gm[1].length
@@ -544,7 +565,13 @@ export function extractGroup(
   }
 
   const tm = anyField ? trailingGroupRegex.exec(s) : null;
-  if (tm && (tm[1] === undefined || afterTags) && accept(tm[2])) {
+  if (
+    tm &&
+    (tm[1] === undefined
+      ? !afterRemoval || followsTag(s, tm.index)
+      : afterTags && !afterRemoval) &&
+    accept(tm[2])
+  ) {
     return { value: tm[2], index: tm.index + tm[0].length - tm[2].length };
   }
   return leadingGroup === null ? null : { value: leadingGroup, index: 0 };
