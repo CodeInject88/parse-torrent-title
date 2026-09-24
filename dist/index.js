@@ -1,0 +1,101 @@
+/**
+ * Parse Torrent Title - TypeScript Port
+ *
+ * A 1:1 port of the Go torrent title parser
+ */
+import { parse } from './parser.js';
+import { handlers as defaultHandlers } from './handlers.js';
+/**
+ * Parser class for customisable torrent title parsing
+ */
+export class Parser {
+    constructor() {
+        this.handlers = [];
+    }
+    /**
+     * Add a custom handler to the parser
+     * @param handler - The handler to add
+     * @returns The parser instance for chaining
+     */
+    addHandler(handler) {
+        if (!handler) {
+            throw new Error('Handler cannot be undefined or null');
+        }
+        this.handlers.push(handler);
+        return this;
+    }
+    /**
+     * Add multiple custom handlers to the parser
+     * @param handlers - Array of handlers to add
+     * @returns The parser instance for chaining
+     */
+    addHandlers(handlers) {
+        if (!handlers || handlers.length === 0) {
+            throw new Error('Handlers array cannot be undefined, null, or empty');
+        }
+        if (handlers.some((h) => h === null || h === undefined)) {
+            throw new Error('Handlers array cannot contain null or undefined handlers');
+        }
+        this.handlers.push(...handlers);
+        return this;
+    }
+    /**
+     * Add default handlers for specific fields
+     * @param fields - Optional array of field names to include. If empty, all default handlers are added.
+     * @returns The parser instance for chaining
+     */
+    addDefaultHandlers(...fields) {
+        if (fields.length === 0) {
+            this.handlers.push(...defaultHandlers);
+        }
+        else {
+            // Add only handlers for specified fields
+            const selectedFieldMap = new Set(fields);
+            const selectedHandlers = defaultHandlers.filter((h) => selectedFieldMap.has(h.field));
+            this.handlers.push(...selectedHandlers);
+        }
+        return this;
+    }
+    /**
+     * Parse a torrent title using the configured handlers
+     * @param title - The torrent title to parse
+     * @returns Parsed result with extracted metadata and any custom fields
+     * @template T - Optional type for custom fields added by custom handlers
+     *
+     * @example
+     * // Without custom fields
+     * const result = parser.parse('Movie.2024.1080p');
+     *
+     * @example
+     * // With typed custom fields
+     * const result = parser.parse<{ customId: number[] }>('Movie.2024.custom-123.1080p');
+     * console.log(result.customId); // Type-safe access
+     */
+    parse(title) {
+        return parse(title, this.handlers);
+    }
+}
+/**
+ * Parse a torrent title and extract metadata using all default handlers
+ * @param title - The torrent title to parse
+ * @returns Parsed result with extracted metadata
+ */
+export function parseTorrentTitle(title) {
+    return parse(title, defaultHandlers);
+}
+/**
+ * Create a partial parser with only specific fields
+ * @param fieldNames - Array of field names to parse
+ * @returns A parser function that only extracts the specified fields
+ */
+export function getPartialParser(fieldNames) {
+    const selectedFieldMap = new Set(fieldNames);
+    const selectedHandlers = defaultHandlers.filter((h) => selectedFieldMap.has(h.field));
+    return (title) => parse(title, selectedHandlers);
+}
+import * as transforms from './transforms.js';
+import * as processors from './processors.js';
+import * as validators from './validators.js';
+export { handlers } from './handlers.js';
+export { transforms, processors, validators };
+//# sourceMappingURL=index.js.map
