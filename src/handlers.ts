@@ -2408,7 +2408,7 @@ export const handlers: Handler[] = [
     field: 'languages',
     pattern: /\bde\b/i,
     validateMatch: validateLookahead(
-      '(?:[ .,/-]+(?:[A-Z]{2}[ .,/-]+){2,})',
+      '(?:[ .,/()\\[\\]-]+(?:[A-Z]{2}[ .,/()\\[\\]-]+){1,}[A-Z]{2}(?:[ .,/()\\[\\]-]+|$))',
       'i',
       true
     ),
@@ -2421,7 +2421,7 @@ export const handlers: Handler[] = [
     pattern: /\bde\b/i,
     transform: toValueSet('de'),
     validateMatch: validateLookbehind(
-      '(?:[ .,/-]+(?:[A-Z]{2}[ .,/-]+){2,})',
+      '(?:[ .,/()\\[\\]-]+(?:[A-Z]{2}[ .,/()\\[\\]-]+){2,})',
       'i',
       true
     ),
@@ -2433,8 +2433,8 @@ export const handlers: Handler[] = [
     pattern: /\bde\b/i,
     transform: toValueSet('de'),
     validateMatch: validateAnd(
-      validateLookbehind('(?:[ .,/-]+[A-Z]{2}[ .,/-]+)', 'i', true),
-      validateLookahead('(?:[ .,/-]+[A-Z]{2}[ .,/-]+)', 'i', true)
+      validateLookbehind('(?:[ .,/()\\[\\]-]+[A-Z]{2}[ .,/()\\[\\]-]+)', 'i', true),
+      validateLookahead('(?:[ .,/()\\[\\]-]+[A-Z]{2}(?:[ .,/()\\[\\]-]+|$))', 'i', true)
     ),
     keepMatching: true,
     skipFromTitle: true

@@ -560,4 +560,26 @@ describe('Language Detection Tests', () => {
     expect(result.languages).toBeUndefined();
     expect(result.title).toBe('The English Patient');
   });
+
+  test('detects DE in hyphenated language lists', () => {
+    const cases = [
+      [
+        'Good Girls (S01)(2018)(Complete)(FHD)(1080p)(x264)(WebDL)(EN-DE-PL)(MultiSUB) PHDTeam',
+        ['multi subs', 'en', 'de', 'pl'],
+      ],
+      ['Movie (EN-DE-PL)', ['en', 'de', 'pl']],
+      ['Movie [EN-DE-PL]', ['en', 'de', 'pl']],
+      ['Movie EN-DE-PL', ['en', 'de', 'pl']],
+      ['Movie (DE-EN-PL)', ['en', 'de', 'pl']],
+      ['Movie [DE-EN-PL]', ['en', 'de', 'pl']],
+      ['Movie DE-EN-PL', ['en', 'de', 'pl']],
+      ['Movie (EN-PL-DE)', ['en', 'de', 'pl']],
+      ['Movie [EN-PL-DE]', ['en', 'de', 'pl']],
+      ['Movie EN-PL-DE', ['en', 'de', 'pl']],
+    ] as const;
+
+    cases.forEach(([title, expected]) => {
+      expect(parseTorrentTitle(title).languages).toEqual(expected);
+    });
+  });
 });
