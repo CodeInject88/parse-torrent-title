@@ -1,0 +1,8 @@
+tvpnlogopeu.samsungcloud.tv
+tvpnlogopus.samsungcloud.tv
+tvpnlogodus.samsungcloud.tv
+tvpnlogosus.samsungcloud.tv
+tvpndynamiclogopeu.samsungcloud.tv
+tvpndynamiclogopus.samsungcloud.tv
+tvpndynamiclogosus.samsungcloud.tv
+qoe.samsungcloud.tv
